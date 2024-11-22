@@ -14,13 +14,16 @@
 
 #include "ray/common/scheduling/fixed_point.h"
 #include "ray/raylet/scheduling/local_resource_manager.h"
-#include "ray/common/scheduling/cluster_resource_manager.h"
+#include "ray/raylet/scheduling/cluster_resource_manager.h"
+#include "ray/common/grpc_util.h"
+#include "ray/common/ray_config.h"
+#include "ray/util/container_util.h"
 
 #include "external_scheduler.h"
 
 namespace external_scheduler {
 
-const int PORT 8080;
+const int PORT = 8080;
 const std::string IP_ADDR = "127.0.0.1";
 int socket_fd;
 bool initialized = false;
@@ -38,7 +41,7 @@ void full_send(void* data, size_t size){
         init();
     }
     do{
-       ok = write(socket_fd, data, size);
+       ssize_t ok = write(socket_fd, data, size);
 
         if(ok > 0){
             data += ok;
@@ -52,15 +55,11 @@ void full_send(void* data, size_t size){
     }while(size > 0);
 }
 
-size_t full_recv(void* data, size_t max_size){
+size_t full_recv(void* data, size_t size){
     if(!initialized){
         init();
     }
-    if(ok != sizeof(size)){
-        close(socket_fd);
-        exit(0);
-    }
-    ok = recv(socket_fd, data, size, MSG_WAITALL);
+    ssize_t ok = recv(socket_fd, data, size, MSG_WAITALL);
     
     if(ok != size){
         close(socket_fd);
@@ -70,8 +69,10 @@ size_t full_recv(void* data, size_t max_size){
 }
 
 void send_resources(const absl::flat_hash_map<std::string, double>& resource_map){//does not end the message
-
-    for(std::pair<std::string, double> resource[name, value] : resource_map){
+    std::map<std::string, int>::iterator it;
+    for(it = resource_map.begin(); it != resource_map.end(); it++){
+        std::string name = it->first;
+        double value = it->second;
         full_send(name.c_str(), name.length() + 1);//also send the NULL terminator
         full_send(&value, sizeof(double));
     }

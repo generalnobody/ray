@@ -14,19 +14,19 @@
 
 #include "ray/common/scheduling/fixed_point.h"
 #include "ray/raylet/scheduling/local_resource_manager.h"
-#include "ray/common/scheduling/cluster_resource_manager.h"
+#include "ray/raylet/scheduling/cluster_resource_manager.h"
+#include "ray/common/grpc_util.h"
+#include "ray/common/ray_config.h"
+#include "ray/util/container_util.h"
 
 
 //extern internal::Work;
 
 namespace external_scheduler {
 
-const int PORT 8080;
+const int PORT = 8080;
 const std::string IP_ADDR = "127.0.0.1";
 int socket_fd;
-size_t existing_tasks = 0;
-std::map<taskID_t, internal::Work>work_map;
-
 
 enum API_CODES : uint8_t{
     ADD_NODE = 0x0,
@@ -35,7 +35,7 @@ enum API_CODES : uint8_t{
 };
 
 //TODO add thread safety?
-void full_send(void* data, size_t size)
+void full_send(void* data, size_t size);
 size_t full_recv(void* data, size_t max_size);
 
 void send_resources(const absl::flat_hash_map<std::string, double>& resource_map);

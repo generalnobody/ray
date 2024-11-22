@@ -19,6 +19,8 @@
 #include "ray/common/grpc_util.h"
 #include "ray/common/ray_config.h"
 
+#include "external_scheduler.h"
+
 namespace ray {
 
 using namespace ::ray::raylet_scheduling_policy;
@@ -64,6 +66,9 @@ void ClusterResourceScheduler::Init(
     std::function<int64_t(void)> get_used_object_store_memory,
     std::function<bool(void)> get_pull_manager_at_capacity,
     std::function<void(const rpc::NodeDeathInfo &)> shutdown_raylet_gracefully) {
+  
+  external_scheduler::init();//HIJACK INIT
+
   cluster_resource_manager_ = std::make_unique<ClusterResourceManager>(io_service);
   local_resource_manager_ = std::make_unique<LocalResourceManager>(
       local_node_id_,
@@ -151,6 +156,16 @@ scheduling::NodeID ClusterResourceScheduler::GetBestSchedulableNode(
     const std::string &preferred_node_id,
     int64_t *total_violations,
     bool *is_infeasible) {
+
+    //HIJACK HERE
+    scheduling::NodeID best_node = external_scheduler::schedule(resouce_request);
+
+    *is_infeasible = best_node_id.IsNil();
+    if (!*is_infeasible) {
+      *total_violations = 0;
+    }
+    return best_node;
+
   // The zero cpu actor is a special case that must be handled the same way by all
   // scheduling policies, except for HARD node affnity scheduling policy.
   if (actor_creation && resource_request.IsEmpty() &&

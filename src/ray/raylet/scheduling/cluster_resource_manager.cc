@@ -20,6 +20,8 @@
 #include "ray/common/ray_config.h"
 #include "ray/util/container_util.h"
 
+#include "external_scheduler.h"
+
 namespace ray {
 
 ClusterResourceManager::ClusterResourceManager(instrumented_io_context &io_service)
@@ -63,8 +65,11 @@ void ClusterResourceManager::AddOrUpdateNode(scheduling::NodeID node_id,
   if (it == nodes_.end()) {
     // This node is new, so add it to the map.
     nodes_.emplace(node_id, node_resources);
+    external_scheduler::add_node(node_id, node_resources);
   } else {
     // This node exists, so update its resources.
+    external_scheduler::remove_node(node_id);
+    external_scheduler::add_node(node_id, node_resources);
     it->second = Node(node_resources);
   }
 }
@@ -105,6 +110,7 @@ bool ClusterResourceManager::UpdateNode(
 
 bool ClusterResourceManager::RemoveNode(scheduling::NodeID node_id) {
   received_node_resources_.erase(node_id);
+  scheduler::remove_node(node_id);
   return nodes_.erase(node_id) != 0;
 }
 
@@ -151,6 +157,10 @@ void ClusterResourceManager::UpdateResourceCapacity(scheduling::NodeID node_id,
   }
   local_view->total.Set(resource_id, total);
   local_view->available.Set(resource_id, available);
+
+  //HIJACK,  SYNC WITH EXTERNAL SCHEDULER
+  external_scheduler::remove_node(node_id);
+  external_scheduler::add_node(node_id, local_view);
 }
 
 bool ClusterResourceManager::DeleteResources(
@@ -165,6 +175,9 @@ bool ClusterResourceManager::DeleteResources(
     local_view->total.Set(resource_id, 0);
     local_view->available.Set(resource_id, 0);
   }
+  //HIJACK UPDATE EXTERNAL SCHEDULER
+  external_scheduler::remove_node(node_id);
+  external_scheduler::add_node(node_id, local_view);
   return true;
 }
 
@@ -190,6 +203,10 @@ bool ClusterResourceManager::SubtractNodeAvailableResources(
 
   resources->available -= resource_request.GetResourceSet();
   resources->available.RemoveNegative();
+
+  //HIJACK UPDATE EXTERNAL SCHEDULER
+  external_scheduler::remove_node(node_id);
+  external_scheduler::add_node(node_id, local_view);
 
   // TODO(swang): We should also subtract object store memory if the task has
   // arguments. Right now we do not modify object_pulls_queued in case of
@@ -236,6 +253,9 @@ bool ClusterResourceManager::AddNodeAvailableResources(scheduling::NodeID node_i
       node_resources->available.Set(resource_id, new_available);
     }
   }
+  //HIJACK UPDATE EXTERNAL SCHEDULER
+  external_scheduler::remove_node(node_id);
+  external_scheduler::add_node(node_id, node_resources);
   return true;
 }
 
@@ -254,6 +274,10 @@ bool ClusterResourceManager::UpdateNodeNormalTaskResources(
         local_normal_task_resources = normal_task_resources;
         node_resources->latest_resources_normal_task_timestamp =
             resource_data.resources_normal_task_timestamp();
+
+        //HIJACK UPDATE EXTERNAL SCHEDULER
+        external_scheduler::remove_node(node_id);
+        external_scheduler::add_node(node_id, node_resources);
         return true;
       }
     }

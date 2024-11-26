@@ -1,36 +1,37 @@
 import socket
+import struct
 
 def resources_to_bytestring(resources):
     bytestr = b''
     for key, value in resources.items():
         bytestr += key.encode('ascii') + b'\x00'
-        bytestr += value.to_bytes(8, byteorder='little', signed=True)
+        bytestr += struct.pack('<d', value)
     return bytestr
 
 node1ID = 50
 node1Resources = {
-    "cpu": 5,
-    "gpu": 10
+    "cpu": 5.0,
+    "gpu": 10.0
 }
 node2ID = 60
 node2Resources = {
-    "cpu": 10,
-    "gpu": 20
+    "cpu": 10.0,
+    "gpu": 20.0
 }
 nodeBadID = 70 # Test removing bad id
 add_node1 = b'\x00' + node1ID.to_bytes(8, byteorder='little', signed=True) + resources_to_bytestring(node1Resources)
 add_node2 = b'\x00' + node2ID.to_bytes(8, byteorder='little', signed=True) + resources_to_bytestring(node2Resources)
 
 task1 = {
-    "cpu": 7,
-    "gpu": 5
+    "cpu": 7.0,
+    "gpu": 5.0
 }
 task2 = {
-    "cpu": 2,
-    "gpu": 10
+    "cpu": 2.0,
+    "gpu": 10.0
 }
 task3 = { # None available
-    "cpu": 20,
+    "cpu": 20.0,
 }
 schedule_task1 = b'\x02' + resources_to_bytestring(task1)
 schedule_task2 = b'\x02' + resources_to_bytestring(task2)

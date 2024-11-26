@@ -1,5 +1,6 @@
 import socket
 import selectors
+import struct
 from enum import Enum, IntEnum
 
 class API_CODES(IntEnum):
@@ -24,7 +25,7 @@ def decode_api_resources(bytestr):
         key, bytestr = bytestr.split(b'\x00', 1)
         val = bytestr[:8]
         bytestr = bytestr[8:]
-        resources[key] = int.from_bytes(val, byteorder='little', signed=True)
+        resources[key] = struct.unpack('<d', val)[0]
     return resources
 
 # Finds node with shortest queue that matches task's resource requirements

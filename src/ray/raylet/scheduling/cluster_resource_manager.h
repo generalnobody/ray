@@ -29,6 +29,8 @@
 #include "ray/util/logging.h"
 #include "src/ray/protobuf/gcs.pb.h"
 
+#include "external_scheduler.h"
+
 namespace ray {
 namespace raylet {
 class ClusterTaskManagerTest;
@@ -45,6 +47,7 @@ class GcsActorSchedulerTest;
 /// This class is not thread safe.
 class ClusterResourceManager {
  public:
+  external_scheduler::State state;
   explicit ClusterResourceManager(instrumented_io_context &io_service);
 
   /// Get the resource view of the cluster.

@@ -19,7 +19,7 @@
 #include "ray/common/grpc_util.h"
 #include "ray/common/ray_config.h"
 
-#include "external_scheduler.h"
+//#include "external_scheduler.h"
 
 namespace ray {
 
@@ -67,7 +67,7 @@ void ClusterResourceScheduler::Init(
     std::function<bool(void)> get_pull_manager_at_capacity,
     std::function<void(const rpc::NodeDeathInfo &)> shutdown_raylet_gracefully) {
   
-  external_scheduler::init();//HIJACK INIT
+  GetClusterResourceManager().state = external_scheduler::init();//HIJACK INIT
 
   cluster_resource_manager_ = std::make_unique<ClusterResourceManager>(io_service);
   local_resource_manager_ = std::make_unique<LocalResourceManager>(
@@ -158,9 +158,9 @@ scheduling::NodeID ClusterResourceScheduler::GetBestSchedulableNode(
     bool *is_infeasible) {
 
     //HIJACK HERE
-    scheduling::NodeID best_node = external_scheduler::schedule(resouce_request);
+    scheduling::NodeID best_node = external_scheduler::schedule(resource_request, GetClusterResourceManager().state);
 
-    *is_infeasible = best_node_id.IsNil();
+    *is_infeasible = best_node.IsNil();
     if (!*is_infeasible) {
       *total_violations = 0;
     }

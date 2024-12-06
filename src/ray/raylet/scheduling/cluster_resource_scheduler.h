@@ -33,6 +33,8 @@
 #include "ray/util/logging.h"
 #include "src/ray/protobuf/gcs.pb.h"
 
+//#include "external_scheduler.h"
+
 namespace ray {
 
 using raylet_scheduling_policy::SchedulingOptions;

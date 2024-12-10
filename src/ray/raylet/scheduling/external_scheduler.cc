@@ -103,46 +103,56 @@ std::vector<uint8_t> resources_to_vector(const absl::flat_hash_map<std::string, 
 
 
 
-scheduling::NodeID schedule(const ResourceRequest& resources, State state){
-    std::cout << "EXTERNAL SCHEDULER: EXECUTING SCHEDULE NOW!" << std::endl;
+scheduling::NodeID schedule(const ResourceRequest& resources, State* state){
+    state->log_file << "EXTERNAL SCHEDULER: EXECUTING SCHEDULE NOW!" << std::endl;
 
-    if(!state.initialized){
-        std::cerr << "EXTERNAL SCHEDULER schedule() but not initialized" << std::endl;
+    if(state == nullptr || !state->initialized){
+        state->log_file << "EXTERNAL SCHEDULER schedule() but not initialized" << std::endl;
         exit(1);
     }
     
     std::vector<uint8_t> data = resources_to_vector(resources.ToResourceMap());
-    full_send(data.data(), data.size(), state.socket_fd);
+    full_send(data.data(), data.size(), state->socket_fd);
 
-    if(receive_ok(state.socket_fd)){
+    if(receive_ok(state->socket_fd)){
         int64_t nodeID;
-        ssize_t ok = recv(state.socket_fd, &nodeID, sizeof(nodeID), 0);
+        ssize_t ok = recv(state->socket_fd, &nodeID, sizeof(nodeID), 0);
 
         if(ok != sizeof(nodeID)){
-            std::cerr << "Failed to receive nodeID in schedule" << std::endl;
-            close(state.socket_fd);
+            state->log_file << "Failed to receive nodeID in schedule" << std::endl;
+            die(state);
             exit(0);
         }
-        std::cout << "EXTERNAL SCHEDULER: FOUND GOOD NODE" << std::endl;
+        state->log_file << "EXTERNAL SCHEDULER: FOUND GOOD NODE" << std::endl;
         return scheduling::NodeID(nodeID);
     }
-    std::cout << "EXTERNAL SCHEDULER: FOUND NO NODE!" << std::endl;
+    state->log_file << "EXTERNAL SCHEDULER: FOUND NO NODE!" << std::endl;
     return scheduling::NodeID::Nil();
 }
 
 
-void add_node(scheduling::NodeID node, const NodeResources& resources, State state){//see cluster_resource_manager.cc
-    std::cout << "EXTERNAL SCHEDULER: EXECUTING ADD NODE NOW. ADDING NODE: " << node.ToInt() << std::endl;
+void add_node(scheduling::NodeID node, const NodeResources& resources, State* state){//see cluster_resource_manager.cc
+    state->log_file << "EXTERNAL SCHEDULER: EXECUTING ADD NODE NOW. ADDING NODE: " << node.ToInt() << std::endl;
+    if(state == nullptr || !state->initialized){
+        state->log_file << "EXTERNAL SCHEDULER add_node() but not initialized" << std::endl;
+        exit(1);
+    }
+
     std::vector<uint8_t> data = resources_to_vector(resources.available.GetResourceMap());
     data.at(sizeof(size_t)) = ADD_NODE;
-    full_send(data.data(), data.size(), state.socket_fd);
+    full_send(data.data(), data.size(), state->socket_fd);
 
-    assert(receive_ok(state.socket_fd));
-    std::cout << "EXTERNAL SCHEDULER: ADD NODE COMPLETE" << std::endl;
+    assert(receive_ok(state->socket_fd));
+    state->log_file << "EXTERNAL SCHEDULER: ADD NODE COMPLETE" << std::endl;
 }
 
-void remove_node(scheduling::NodeID node, State state){//see cluster_resource_manager.cc
-    std::cout << "EXTERNAL SCHEDULER: EXECUTING REMOVE NODE NOW! REMOVING NODE:" << node.ToInt() << std::endl;
+void remove_node(scheduling::NodeID node, State* state){//see cluster_resource_manager.cc
+    state->log_file << "EXTERNAL SCHEDULER: EXECUTING REMOVE NODE NOW! REMOVING NODE:" << node.ToInt() << std::endl;
+
+    if(state == nullptr || !state->initialized){
+        state->log_file << "EXTERNAL SCHEDULER remove_node() but not initialized" << std::endl;
+        exit(1);
+    }
 
     int64_t node_ID = node.ToInt();
     std::vector<uint8_t> data;
@@ -152,56 +162,59 @@ void remove_node(scheduling::NodeID node, State state){//see cluster_resource_ma
     for(size_t i = 0; i < sizeof(node_ID); i++){
         data.push_back(tmp[i]);
     }
-    full_send(data.data(), data.size(), state.socket_fd);
+    full_send(data.data(), data.size(), state->socket_fd);
 
-    assert(receive_ok(state.socket_fd));
-    std::cout << "EXTERNAL SCHEDULER: REMOVE NODE COMPLETE" << std::endl;
+    assert(receive_ok(state->socket_fd));
+    state->log_file << "EXTERNAL SCHEDULER: REMOVE NODE COMPLETE" << std::endl;
 }
 
-struct State init(){
+struct State* init(){
     std::cout << "EXTERNAL SCHEDULER: INIT NOW" << std::endl;
     struct sockaddr_in servaddr;
     const std::string config_name = "EXERNAL_SCHEDULER_CONFIG.txt";
     std::ifstream config;
     config.open(config_name, std::ios::in);
+    struct State* result = new struct State;
+    result->log_file.open("EXERNAL_SCHEDULER_LOG.txt", std::ios::out);
+    assert(result->log_file.is_open());
 
     if(!config.is_open()){
-        std::cerr << "EXTERNAL SCHEDULER: failed to open config file: \"" << config_name << "\"" << std::endl;
+        result->log_file << "EXTERNAL SCHEDULER: failed to open config file: \"" << config_name << "\"" << std::endl;
         exit(0);
     }
-    struct State result;
-
-    config >> result.IP_ADDR;
-    config >> result.PORT;
+    config >> result->IP_ADDR;
+    config >> result->PORT;
 
     // socket create and verification
-    result.socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (result.socket_fd == -1) {
-        std::cerr << "socket creation failed..." << std::endl;
+    result->socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (result->socket_fd == -1) {
+        result->log_file << "socket creation failed" << std::endl;
         exit(0);
     }
+    result->log_file << "socket created ok" << std::endl;
     bzero(&servaddr, sizeof(servaddr));
 
     // assign IP, PORT
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(result.IP_ADDR.c_str());
-    servaddr.sin_port = htons(result.PORT);
+    servaddr.sin_addr.s_addr = inet_addr(result->IP_ADDR.c_str());
+
+    servaddr.sin_port = htons(result->PORT);
 
     // connect the client socket to server socket
-    if(connect(result.socket_fd, (struct sockaddr*)&servaddr, sizeof(servaddr)) != 0){
-        std::cerr << "connection with the server failed...\n" << std::endl;
+    if(connect(result->socket_fd, (struct sockaddr*)&servaddr, sizeof(servaddr)) != 0){
+        result->log_file << "connection with the server failed...\n" << std::endl;
         exit(0);
     }
-    result.initialized = true;
-    std::cout << "EXTERNAL SCHEDULER: CONNECTED TO SERVER, INIT COMPLETE" << std::endl;
+    result->initialized = true;
+    result->log_file << "EXTERNAL SCHEDULER: CONNECTED TO SERVER, INIT COMPLETE" << std::endl;
     return result;
 }
 
-void die(struct State state){
-    std::cout << "EXTERNAL SCHEDULER: DYING NOW" << std::endl;
-    close(state.socket_fd);
-    state.initialized = false;
-    std::cout << "EXTERNAL SCHEDULER: DYING COMPLETE" << std::endl;
+void die(struct State* state){
+    state->log_file << "EXTERNAL SCHEDULER: DYING NOW" << std::endl;
+    close(state->socket_fd);
+    state->initialized = false;
+    state->log_file.close();
 }
 
 }//end namespace external_scheduler

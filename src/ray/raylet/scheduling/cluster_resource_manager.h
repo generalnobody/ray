@@ -47,7 +47,7 @@ class GcsActorSchedulerTest;
 /// This class is not thread safe.
 class ClusterResourceManager {
  public:
-  external_scheduler::State state;
+  external_scheduler::State* state = nullptr;
   explicit ClusterResourceManager(instrumented_io_context &io_service);
 
   /// Get the resource view of the cluster.

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <fstream>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -43,6 +44,7 @@ struct State{
     std::string IP_ADDR = "127.0.0.1";
     int socket_fd;
     bool initialized = false;
+    std::ofstream log_file;
 };
 
 enum API_CODES : uint8_t{
@@ -56,13 +58,13 @@ void full_send(void* data, size_t size, int socket_fd);
 size_t full_recv(void* data, size_t max_size, int socket_fd);
 bool receive_ok(int socket_fd);
 void send_resources(const absl::flat_hash_map<std::string, double>& resource_map);
-scheduling::NodeID schedule(const ResourceRequest& resources, struct State state);
-void add_node(scheduling::NodeID node, const NodeResources& resources, struct State state);
-void remove_node(scheduling::NodeID node, struct State state);
+scheduling::NodeID schedule(const ResourceRequest& resources, struct State* state);
+void add_node(scheduling::NodeID node, const NodeResources& resources, struct State* state);
+void remove_node(scheduling::NodeID node, struct State* state);
 
-struct State init();
+struct State* init();
 
-void die();
+void die(struct State* state);
 
 }//end namespace external_scheduler
 #endif//define

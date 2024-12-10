@@ -67,9 +67,14 @@ void ClusterResourceScheduler::Init(
     std::function<bool(void)> get_pull_manager_at_capacity,
     std::function<void(const rpc::NodeDeathInfo &)> shutdown_raylet_gracefully) {
   
-  GetClusterResourceManager().state = external_scheduler::init();//HIJACK INIT
+    
 
   cluster_resource_manager_ = std::make_unique<ClusterResourceManager>(io_service);
+  GetClusterResourceManager().state = external_scheduler::init();//HIJACK INIT
+  //GetClusterResourceManager().state = nullptr;
+  
+  // = external_scheduler::init();
+
   local_resource_manager_ = std::make_unique<LocalResourceManager>(
       local_node_id_,
       local_node_resources,
@@ -159,6 +164,7 @@ scheduling::NodeID ClusterResourceScheduler::GetBestSchedulableNode(
 
     //HIJACK HERE
     scheduling::NodeID best_node = external_scheduler::schedule(resource_request, GetClusterResourceManager().state);
+
 
     *is_infeasible = best_node.IsNil();
     if (!*is_infeasible) {

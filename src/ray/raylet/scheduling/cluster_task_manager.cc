@@ -47,15 +47,7 @@ void ClusterTaskManager::QueueAndScheduleTask(
     bool is_selected_based_on_locality,
     rpc::RequestWorkerLeaseReply *reply,
     rpc::SendReplyCallback send_reply_callback) {
-
-      std::cout << "queue and schedule task on global queue task id: " << task.GetTaskSpecification().TaskId();
-      std::string ok = (grant_or_reject)? "true" : "false";
-      std::cout << " grant or reject value (whatever that is) :" << ok;
-      std::cout << " we ignore locality ";
-      std::cout << " what to do with the reqeustworker lease reply and the send reply callback?" << std::endl;
-      std::cout << " the python script should add the work to its queue" << std::endl;
-
-
+      
   RAY_LOG(DEBUG) << "Queuing and scheduling task "
                  << task.GetTaskSpecification().TaskId();
   auto work = std::make_shared<internal::Work>(
@@ -147,16 +139,6 @@ bool ClusterTaskManager::CancelAllTaskOwnedBy(
 }
 
 void ClusterTaskManager::ScheduleAndDispatchTasks() {
-
-  std::cout << " now running ScheduleAndDispatchTasks() for the cluster manager this is where the python code should come in.";
-  std::cout << " python should return a mapping from work to NodeIDs, the NodeIDs can be an empty string, meaning to cancel the work" << std::endl;
-
-
-
-
-
-
-
 
   // Always try to schedule infeasible tasks in case they are now feasible.
   TryScheduleInfeasibleTask();
@@ -321,10 +303,6 @@ void ClusterTaskManager::FillResourceUsage(rpc::ResourcesData &data) {
   data.set_is_draining(resource_view_sync_message.is_draining());
   data.set_draining_deadline_timestamp_ms(
       resource_view_sync_message.draining_deadline_timestamp_ms());
-
-
-  std::cout << "I think the python script should be updated with the resources usage" << std::endl;
-
 }
 
 bool ClusterTaskManager::AnyPendingTasksForResourceAcquisition(

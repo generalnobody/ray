@@ -66,14 +66,8 @@ void ClusterResourceScheduler::Init(
     std::function<int64_t(void)> get_used_object_store_memory,
     std::function<bool(void)> get_pull_manager_at_capacity,
     std::function<void(const rpc::NodeDeathInfo &)> shutdown_raylet_gracefully) {
-  
-    
-
   cluster_resource_manager_ = std::make_unique<ClusterResourceManager>(io_service);
-  GetClusterResourceManager().state = external_scheduler::init();//HIJACK INIT
-  //GetClusterResourceManager().state = nullptr;
-  
-  // = external_scheduler::init();
+  cluster_resource_manager_->state = external_scheduler::init();//HIJACK: INIT state
 
   local_resource_manager_ = std::make_unique<LocalResourceManager>(
       local_node_id_,
@@ -161,32 +155,23 @@ scheduling::NodeID ClusterResourceScheduler::GetBestSchedulableNode(
     const std::string &preferred_node_id,
     int64_t *total_violations,
     bool *is_infeasible) {
-
-    //HIJACK HERE
-    scheduling::NodeID best_node = external_scheduler::schedule(resource_request, GetClusterResourceManager().state);
-
-
-    *is_infeasible = best_node.IsNil();
-    if (!*is_infeasible) {
-      *total_violations = 0;
-    }
-    return best_node;
-
   // The zero cpu actor is a special case that must be handled the same way by all
   // scheduling policies, except for HARD node affnity scheduling policy.
   if (actor_creation && resource_request.IsEmpty() &&
       !IsHardNodeAffinitySchedulingStrategy(scheduling_strategy)) {
-    return scheduling_policy_->Schedule(resource_request, SchedulingOptions::Random());
+    //return scheduling_policy_->Schedule(resource_request, SchedulingOptions::Random());
   }
 
-  auto best_node_id = scheduling::NodeID::Nil();
+  auto best_node_id = external_scheduler::schedule(resource_request, cluster_resource_manager_->state);
+  /*
+
   if (scheduling_strategy.scheduling_strategy_case() ==
       rpc::SchedulingStrategy::SchedulingStrategyCase::kSpreadSchedulingStrategy) {
     best_node_id =
         scheduling_policy_->Schedule(resource_request,
                                      SchedulingOptions::Spread(
-                                         /*avoid_local_node*/ force_spillback,
-                                         /*require_node_available*/ force_spillback));
+                                          force_spillback,
+                                          force_spillback));
   } else if (scheduling_strategy.scheduling_strategy_case() ==
              rpc::SchedulingStrategy::SchedulingStrategyCase::
                  kNodeAffinitySchedulingStrategy) {
@@ -221,11 +206,11 @@ scheduling::NodeID ClusterResourceScheduler::GetBestSchedulableNode(
     best_node_id =
         scheduling_policy_->Schedule(resource_request,
                                      SchedulingOptions::Hybrid(
-                                         /*avoid_local_node*/ force_spillback,
-                                         /*require_node_available*/ force_spillback,
+                                          force_spillback,
+                                          force_spillback,
                                          preferred_node_id));
   }
-
+  */
   *is_infeasible = best_node_id.IsNil();
   if (!*is_infeasible) {
     // TODO (Alex): Support soft constraints if needed later.

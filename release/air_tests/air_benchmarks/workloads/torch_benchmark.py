@@ -3,6 +3,7 @@ import os
 import time
 from pathlib import Path
 from typing import Dict, Tuple
+from datetime import datetime
 
 import click
 import numpy as np
@@ -15,8 +16,7 @@ from torchvision.transforms import ToTensor
 
 
 CONFIG = {"lr": 1e-3, "batch_size": 64}
-VANILLA_RESULT_JSON = "/tmp/vanilla_out.json"
-
+VANILLA_RESULT_JSON = "/tmp/torch_benchmark/vanilla_out.json"
 
 # Define model
 class NeuralNetwork(nn.Module):
@@ -390,6 +390,7 @@ def cli():
 @click.option("--batch-size", type=int, default=64)
 @click.option("--smoke-test", is_flag=True, default=False)
 @click.option("--local", is_flag=True, default=False)
+@click.option("--custom_scheduler", is_flag=True, default=False)
 def run(
     num_runs: int = 1,
     num_epochs: int = 4,
@@ -399,11 +400,18 @@ def run(
     batch_size: int = 64,
     smoke_test: bool = False,
     local: bool = False,
+    custom_scheduler: bool = False,
 ):
     # Note: smoke_test is ignored as we just adjust the batch size.
     # The parameter is passed by the release test pipeline.
     import ray
     from benchmark_util import upload_file_to_all_nodes, run_command_on_all_nodes
+
+    # Configure output files
+    global VANILLA_RESULT_JSON
+    current_datetime = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+    output_dir = f"/tmp/torch_benchmark/{'external' if custom_scheduler else 'standard'}--{current_datetime}{'--local' if local else ''}"
+    os.makedirs(output_dir, exist_ok=True)
 
     config = CONFIG.copy()
     config["epochs"] = num_epochs
@@ -514,7 +522,7 @@ def run(
     }
 
     print("Results:", result)
-    test_output_json = os.environ.get("TEST_OUTPUT_JSON", "/tmp/result.json")
+    test_output_json = f'{output_dir}/result.json'
     with open(test_output_json, "wt") as f:
         json.dump(result, f)
 

@@ -16,7 +16,7 @@ from torchvision.transforms import ToTensor
 
 
 CONFIG = {"lr": 1e-3, "batch_size": 64}
-VANILLA_RESULT_JSON = "/tmp/torch_benchmark/vanilla_out.json"
+VANILLA_RESULT_JSON = str(Path.home() / "torch_benchmark" / "vanilla_out.json")
 
 # Define model
 class NeuralNetwork(nn.Module):
@@ -410,7 +410,7 @@ def run(
     # Configure output files
     global VANILLA_RESULT_JSON
     current_datetime = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-    output_dir = f"/tmp/torch_benchmark/{'external' if custom_scheduler else 'standard'}--{current_datetime}{'--local' if local else ''}"
+    output_dir = str(Path.home() / "torch_benchmark" / f"{'external' if custom_scheduler else 'standard'}--{current_datetime}{'--local' if local else ''}")
     os.makedirs(output_dir, exist_ok=True)
 
     config = CONFIG.copy()

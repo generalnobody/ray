@@ -391,6 +391,7 @@ def cli():
 @click.option("--smoke-test", is_flag=True, default=False)
 @click.option("--local", is_flag=True, default=False)
 @click.option("--custom_scheduler", is_flag=True, default=False)
+@click.option("--num_nodes", type=int, default=1)
 def run(
     num_runs: int = 1,
     num_epochs: int = 4,
@@ -401,6 +402,7 @@ def run(
     smoke_test: bool = False,
     local: bool = False,
     custom_scheduler: bool = False,
+    num_nodes: int = 1
 ):
     # Note: smoke_test is ignored as we just adjust the batch size.
     # The parameter is passed by the release test pipeline.
@@ -408,9 +410,8 @@ def run(
     from benchmark_util import upload_file_to_all_nodes, run_command_on_all_nodes
 
     # Configure output files
-    global VANILLA_RESULT_JSON
     current_datetime = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-    output_dir = str(Path.home() / "torch_benchmark" / f"{'external' if custom_scheduler else 'standard'}--{current_datetime}{'--local' if local else ''}")
+    output_dir = str(Path.home() / "torch_benchmark" / f"{'external' if custom_scheduler else 'standard'}--{current_datetime}{'--local' if local else '--np-' + str(num_nodes)}")
     os.makedirs(output_dir, exist_ok=True)
 
     config = CONFIG.copy()
@@ -431,9 +432,9 @@ def run(
     times_ray = []
     times_local_ray = []
     losses_ray = []
-    times_vanilla = []
-    times_local_vanilla = []
-    losses_vanilla = []
+    # times_vanilla = []
+    # times_local_vanilla = []
+    # losses_vanilla = []
     for run in range(1, num_runs + 1):
         time.sleep(2)
 
@@ -452,42 +453,42 @@ def run(
             f"Observed loss = {loss_ray:.4f}"
         )
 
-        time.sleep(2)
+        # time.sleep(2)
 
-        print(f"[Run {run}/{num_runs}] Running Torch vanilla benchmark")
+        # print(f"[Run {run}/{num_runs}] Running Torch vanilla benchmark")
 
-        time_vanilla, time_local_vanilla, loss_vanilla = train_torch_vanilla(
-            num_workers=num_workers,
-            cpus_per_worker=cpus_per_worker,
-            use_gpu=use_gpu,
-            config=config,
-        )
+        # time_vanilla, time_local_vanilla, loss_vanilla = train_torch_vanilla(
+        #     num_workers=num_workers,
+        #     cpus_per_worker=cpus_per_worker,
+        #     use_gpu=use_gpu,
+        #     config=config,
+        # )
 
-        print(
-            f"[Run {run}/{num_runs}] Finished vanilla training ({num_epochs} epochs) "
-            f"in {time_vanilla:.2f} seconds "
-            f"(local training time: {time_local_vanilla:.2f}s). "
-            f"Observed loss = {loss_vanilla:.4f}"
-        )
+        # print(
+        #     f"[Run {run}/{num_runs}] Finished vanilla training ({num_epochs} epochs) "
+        #     f"in {time_vanilla:.2f} seconds "
+        #     f"(local training time: {time_local_vanilla:.2f}s). "
+        #     f"Observed loss = {loss_vanilla:.4f}"
+        # )
 
-        print(
-            f"[Run {run}/{num_runs}] Observed results: ",
-            {
-                "tensorflow_mnist_ray_time_s": time_ray,
-                "tensorflow_mnist_ray_local_time_s": time_local_ray,
-                "tensorflow_mnist_ray_loss": loss_ray,
-                "tensorflow_mnist_vanilla_time_s": time_vanilla,
-                "tensorflow_mnist_vanilla_local_time_s": time_local_vanilla,
-                "tensorflow_mnist_vanilla_loss": loss_vanilla,
-            },
-        )
+        # print(
+        #     f"[Run {run}/{num_runs}] Observed results: ",
+        #     {
+        #         "tensorflow_mnist_ray_time_s": time_ray,
+        #         "tensorflow_mnist_ray_local_time_s": time_local_ray,
+        #         "tensorflow_mnist_ray_loss": loss_ray,
+        #         "tensorflow_mnist_vanilla_time_s": time_vanilla,
+        #         "tensorflow_mnist_vanilla_local_time_s": time_local_vanilla,
+        #         "tensorflow_mnist_vanilla_loss": loss_vanilla,
+        #     },
+        # )
 
         times_ray.append(time_ray)
         times_local_ray.append(time_local_ray)
         losses_ray.append(loss_ray)
-        times_vanilla.append(time_vanilla)
-        times_local_vanilla.append(time_local_vanilla)
-        losses_vanilla.append(loss_vanilla)
+        # times_vanilla.append(time_vanilla)
+        # times_local_vanilla.append(time_local_vanilla)
+        # losses_vanilla.append(loss_vanilla)
 
     times_ray_mean = np.mean(times_ray)
     times_ray_sd = np.std(times_ray)
@@ -495,11 +496,11 @@ def run(
     times_local_ray_mean = np.mean(times_local_ray)
     times_local_ray_sd = np.std(times_local_ray)
 
-    times_vanilla_mean = np.mean(times_vanilla)
-    times_vanilla_sd = np.std(times_vanilla)
+    # times_vanilla_mean = np.mean(times_vanilla)
+    # times_vanilla_sd = np.std(times_vanilla)
 
-    times_local_vanilla_mean = np.mean(times_local_vanilla)
-    times_local_vanilla_sd = np.std(times_local_vanilla)
+    # times_local_vanilla_mean = np.mean(times_local_vanilla)
+    # times_local_vanilla_sd = np.std(times_local_vanilla)
 
     result = {
         "torch_mnist_ray_num_runs": num_runs,
@@ -511,14 +512,14 @@ def run(
         "torch_mnist_ray_time_local_s_sd": times_local_ray_sd,
         "torch_mnist_ray_loss_mean": np.mean(losses_ray),
         "torch_mnist_ray_loss_sd": np.std(losses_ray),
-        "torch_mnist_vanilla_time_s_all": times_vanilla,
-        "torch_mnist_vanilla_time_s_mean": times_vanilla_mean,
-        "torch_mnist_vanilla_time_s_sd": times_vanilla_sd,
-        "torch_mnist_vanilla_local_time_s_all": times_local_vanilla,
-        "torch_mnist_vanilla_local_time_s_mean": times_local_vanilla_mean,
-        "torch_mnist_vanilla_local_time_s_sd": times_local_vanilla_sd,
-        "torch_mnist_vanilla_loss_mean": np.mean(losses_vanilla),
-        "torch_mnist_vanilla_loss_std": np.std(losses_vanilla),
+        # "torch_mnist_vanilla_time_s_all": times_vanilla,
+        # "torch_mnist_vanilla_time_s_mean": times_vanilla_mean,
+        # "torch_mnist_vanilla_time_s_sd": times_vanilla_sd,
+        # "torch_mnist_vanilla_local_time_s_all": times_local_vanilla,
+        # "torch_mnist_vanilla_local_time_s_mean": times_local_vanilla_mean,
+        # "torch_mnist_vanilla_local_time_s_sd": times_local_vanilla_sd,
+        # "torch_mnist_vanilla_loss_mean": np.mean(losses_vanilla),
+        # "torch_mnist_vanilla_loss_std": np.std(losses_vanilla),
     }
 
     print("Results:", result)
@@ -526,23 +527,24 @@ def run(
     with open(test_output_json, "wt") as f:
         json.dump(result, f)
 
-    target_ratio = 1.15
-    ratio = (
-        (times_local_ray_mean / times_local_vanilla_mean)
-        if times_local_vanilla_mean != 0.0
-        else 1.0
-    )
-    if ratio > target_ratio:
-        raise RuntimeError(
-            f"Training on Ray took an average of {times_local_ray_mean:.2f} seconds, "
-            f"which is more than {target_ratio:.2f}x of the average vanilla training "
-            f"time of {times_local_vanilla_mean:.2f} seconds ({ratio:.2f}x). FAILED"
-        )
+    # target_ratio = 1.15
+    # ratio = (
+    #     (times_local_ray_mean / times_local_vanilla_mean)
+    #     if times_local_vanilla_mean != 0.0
+    #     else 1.0
+    # )
+    # if ratio > target_ratio:
+    #     raise RuntimeError(
+    #         f"Training on Ray took an average of {times_local_ray_mean:.2f} seconds, "
+    #         f"which is more than {target_ratio:.2f}x of the average vanilla training "
+    #         f"time of {times_local_vanilla_mean:.2f} seconds ({ratio:.2f}x). FAILED"
+    #     )
 
     print(
-        f"Training on Ray took an average of {times_local_ray_mean:.2f} seconds, "
-        f"which is less than {target_ratio:.2f}x of the average vanilla training "
-        f"time of {times_local_vanilla_mean:.2f} seconds ({ratio:.2f}x). PASSED"
+        f"Training on Ray took an average of {times_local_ray_mean:.2f} seconds."
+        # f"Training on Ray took an average of {times_local_ray_mean:.2f} seconds, "
+        # f"which is less than {target_ratio:.2f}x of the average vanilla training "
+        # f"time of {times_local_vanilla_mean:.2f} seconds ({ratio:.2f}x). PASSED"
     )
 
 

@@ -1,3 +1,20 @@
+# Script used to benchmark external scheduler
+# Modified from original script: https://github.com/ray-project/ray/blob/master/release/air_tests/air_benchmarks/workloads/torch_benchmark.py
+# Removed default PyTorch benchmarking functionality, only focusing on benchmarking the Ray Torch part
+# Benchmarking results are redirected to $HOME/torch_benchmark/
+
+# Possible arguments used to run benchmark:
+# --num-runs: number of times to run same configuration benchmark
+# --num-epochs: number of times to pass the dataset through the neural network
+# --num-workers: number of workers Ray spawns
+# --cpus-per-worker: number of CPUs allocated to each worker
+# --use-gpu: set to True if GPU should be used instead of CPU (not used for benchmarking our external scheduler)
+# --batch-size: (not used when benchmarking our external scheduler)
+# --smoke-test: (not used when benchmarking our external scheduler)
+# --local: whether to spawn a local Ray instance. If False, Ray needs to already be running. Limits Ray instance to 4 CPUs
+# --custom_scheduler: whether the custom scheduler is used or not. Changes output file's folder name
+# --num_nodes: number of nodes present in the Ray instance. Changes output file's folder name
+
 import json
 import os
 import time

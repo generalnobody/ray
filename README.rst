@@ -1,3 +1,64 @@
+VU Distributed Systems - External Scheduler for Ray
+====================================================
+
+*Group Members:* Ingmar Biemond (2725600), Simon Bezemer (2731853), Maurits Reijnaert (2739377)
+
+Project
+-------
+The goal of this project is to design an external scheduler as a service to work with Ray.
+
+The scheduler is located at `./external_scheduler/scheduler.py <./external_scheduler/scheduler.py>`__.
+
+Modifications have also been made to the Ray source code in order to allow it to support communication with the external scheduler service.
+
+The current communication protocol between Ray and the scheduler is as follows:
+
+.. list-table::
+   :widths: 25 50 25 25
+   :header-rows: 1
+
+   * - Function
+     - Message code
+     - Message content
+     - Reply
+   * - add node
+     - ``0x0``
+     - ``[resources]``
+     - ``0x0``
+   * - remove node
+     - ``0x1``
+     - ``[8 bytes node ID]``
+     - ``0x0``
+   * - schedule
+     - ``0x2``
+     - ``[resources]``
+     - *if successful:* ``0x0[8 bytes node ID]`` *, else:* ``[0x1]``
+
+Where ``[resources]`` can be represented with any number of the following resource representation: ``[ASCII string resource key][0x0][8 bytes double resource value]``.
+
+When communicating, each message is prepended with 8 bytes containing a 64-bit integer value representing the length of the following message, in bytes.
+
+Communication to add a node would look like this, for example:
+::
+    <request>: [8 bytes length][0x0][8 bytes node ID][resource1][0x0][resource1 value][resource2][0x0][resource2 value]
+      <reply>: [8 bytes length][0x0]
+
+Benchmarks
+----------
+The following scripts were used for the benchmarks mentioned in our report:
+
+- **Experiment 1**: `Monte Carlo Estimation of Pi <https://docs.ray.io/en/latest/ray-core/examples/monte_carlo_pi.html>`__
+- **Experiment 2**: `Ray Torch Train <https://github.com/generalnobody/ray/blob/ray-2.39.0-dev/release/air_tests/air_benchmarks/workloads/torch_benchmark.py>`__
+- **Experiment 3**: `XGBoost Train <https://github.com/generalnobody/ray/blob/ray-2.39.0-dev/release/train_tests/xgboost_lightgbm/train_batch_inference_benchmark.py>`__
+
+Report
+------
+The report can be found at `./report.pdf <./report.pdf>`__.
+
+
+Original Ray README content
+===========================
+
 .. image:: https://github.com/ray-project/ray/raw/master/doc/source/images/ray_header_logo.png
 
 .. image:: https://readthedocs.org/projects/ray/badge/?version=master

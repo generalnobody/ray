@@ -47,6 +47,7 @@ Installation
 ------------
 In order to use our external scheduler, first build the project according to the `Building Ray from Source <https://docs.ray.io/en/latest/ray-contribute/development.html>`__ guide.
 Specifically, follow the following steps among the ones listed there:
+
 - `Fork and clone the repository <https://docs.ray.io/en/latest/ray-contribute/development.html#fork-the-ray-repository>`__
 - `Prepare a Python virtual environment <https://docs.ray.io/en/latest/ray-contribute/development.html#prepare-a-python-virtual-environment>`__
 - `Then, follow the steps to build Ray according to your OS <https://docs.ray.io/en/latest/ray-contribute/development.html#preparing-to-build-ray-on-linux>`__

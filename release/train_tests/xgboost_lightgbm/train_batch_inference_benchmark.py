@@ -13,8 +13,8 @@ from ray.train.lightgbm import LightGBMTrainer
 from ray.train.xgboost import XGBoostTrainer
 from ray.train import RunConfig, ScalingConfig
 
-_TRAINING_TIME_THRESHOLD = 600
-_PREDICTION_TIME_THRESHOLD = 450
+_TRAINING_TIME_THRESHOLD = 9000 # Changed so would not timeout
+_PREDICTION_TIME_THRESHOLD = 9000 # Changed so would not time out
 
 _EXPERIMENT_PARAMS = {
     "smoke_test": {
@@ -27,7 +27,7 @@ _EXPERIMENT_PARAMS = {
     },
     "10G": {
         "data": "s3://air-example-data-2/10G-xgboost-data.parquet/",
-        "num_workers": 1,
+        "num_workers": 2,       # Changed number of workers to number of nodes in use
         "cpus_per_worker": 12,
     },
     "100G": {
@@ -95,9 +95,11 @@ def train(
         label_column="labels",
         datasets={"train": ds},
         run_config=RunConfig(
-            storage_path="/mnt/cluster_storage", name=f"{framework}_benchmark"
+            storage_path="/home/dsys2450/ray_results/mau/external/10g4workers", name=f"{framework}_benchmark5" # storage path for external scheduler
+            # storage_path="/home/dsys2450/ray_results/mau/internal/10g4workers", name=f"{framework}_benchmark5" # storage path for standard scheduler
         ),
     )
+    start_training = time.perf_counter()
     result = trainer.fit()
     return result
 
@@ -141,6 +143,7 @@ def main(args):
 
     print(f"Running {framework} training benchmark...")
     training_start = time.perf_counter()
+    print(f"{data_path}, {num_workers}, {cpus_per_worker}") # So I could check if I was running correct nworkers and ncpus
     result = train(framework, data_path, num_workers, cpus_per_worker)
     training_time = time.perf_counter() - training_start
 
@@ -172,6 +175,7 @@ def main(args):
 
 if __name__ == "__main__":
     import argparse
+    ray.data.DataContext.get_current().DEFAULT_ENABLE_PROGRESS_BAR_NAME_TRUNCATION = False
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

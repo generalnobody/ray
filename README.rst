@@ -43,6 +43,54 @@ Communication to add a node would look like this, for example:
     <request>: [8 bytes length][0x0][8 bytes node ID][resource1][0x0][resource1 value][resource2][0x0][resource2 value]
       <reply>: [8 bytes length][0x0]
 
+Installation
+------------
+In order to use our external scheduler, first build the project according to the `Building Ray from Source <https://docs.ray.io/en/latest/ray-contribute/development.html>`__ guide.
+Specifically, follow the following steps among the ones listed there:
+- `Fork and clone the repository <https://docs.ray.io/en/latest/ray-contribute/development.html#fork-the-ray-repository>`__
+- `Prepare a Python virtual environment <https://docs.ray.io/en/latest/ray-contribute/development.html#prepare-a-python-virtual-environment>`__
+- `Then, follow the steps to build Ray according to your OS <https://docs.ray.io/en/latest/ray-contribute/development.html#preparing-to-build-ray-on-linux>`__
+
+Usage
+-----
+First, to use Ray with our external scheduler, start the external scheduler.
+
+.. code-block:: bash
+
+   # Cd into the cloned Ray repository:
+   $ cd ray
+
+   # Then, start the external scheduler:
+   $ python external_scheduler/scheduler.py
+
+   # If you need to define a different IP and/or port, use:
+   $  python external_scheduler/scheduler.py -a <ip_address> -p <port>
+
+By default, our external scheduler runs on IP ``127.0.0.1`` with port ``44444``. If multiple nodes are to be connected to the Ray instance, replace this with the current node's external IP address and ensure the port is correctly forwarded.
+
+Then, in a different Terminal window, locate your project directory. In your current directory, from where you will be running your program, create a file named ``EXTERNAL_SCHEDULER_CONFIG.txt``. It will also be automatically created if it does not exist when Ray is initialized. This file is used to specify the IP and port used by the running external scheduler. By default, its contents will be:
+
+.. code-block:: bash
+
+   # EXTERNAL_SCHEDULER_CONFIG.txt
+   127.0.0.1 44444
+
+Change to match the IP and port used when running the external scheduler.
+
+Lastly, in order to use Ray, two different approaches can be used. If you need just a local Ray instance to, for example, test program functionality, simply placing ``ray.init()`` in your program will start a local Ray instance, that will automatically connect to the external scheduler. However, this is usually limited to using just 4 CPU cores, instead of the full amount available in your system. If you need to fully utilize your CPU or connect other nodes to form a distributed system, it is possible to do that by first starting a Ray head-node instance, then connecting all worker nodes to that instance, and finally executing your program. It will automatically connect to a connected Ray instance if you use ``ray.init("auto")`` when initializing Ray.
+
+To start a head-node, then connect other worker nodes, use:
+
+.. code-block:: bash
+
+   # On the head-node:
+   $ ray start --head --port=6379
+
+   # On the worker node(s):
+   $ ray start --address='<head-node-ip>:6379'
+
+Then, run the program. It should automatically connect to the Ray instance running on the machine. It might be necessary to wait for a while after connecting all nodes until the external scheduler shows no more new output, in order to ensure all nodes are correctly initialized. Running ``ray status`` can also check if all nodes are correctly connected to the Ray instance.
+
 Benchmarks
 ----------
 The following scripts were used for the benchmarks mentioned in our report:

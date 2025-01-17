@@ -23,7 +23,7 @@ The current communication protocol between Ray and the scheduler is as follows:
      - Reply
    * - add node
      - ``0x0``
-     - ``[resources]``
+     - ``[8 bytes node ID][resources]``
      - ``0x0``
    * - remove node
      - ``0x1``
